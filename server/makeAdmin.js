@@ -1,9 +1,6 @@
 import mongoose from 'mongoose'
-import dotenv from 'dotenv'
 
-dotenv.config()
-
-await mongoose.connect(process.env.MONGO_URI)
+await mongoose.connect('mongodb+srv://mehekmodi8_db_user:mahak1234@cluster0.u2mmc68.mongodb.net/mern-ecommerce?retryWrites=true&w=majority')
 
 const User = (await import('./models/User.js')).default
 
