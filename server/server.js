@@ -3,11 +3,16 @@ dotenv.config()
 
 import express from 'express'
 import cors from 'cors'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import { connectDB } from './config/db.js'
 import authRoutes from './routes/authRoutes.js'
 import productRoutes from './routes/productRoutes.js'
 import cartRoutes from './routes/cartRoutes.js'
 import orderRoutes from './routes/orderRoutes.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const app = express()
 
@@ -22,8 +27,11 @@ app.use('/api/products', productRoutes)
 app.use('/api/cart', cartRoutes)
 app.use('/api/orders', orderRoutes)
 
-app.get('/', (req, res) => {
-  res.json({ message: '🛒 MERN Ecommerce API is running!' })
+// Serve React frontend
+app.use(express.static(path.join(__dirname, '../client/dist')))
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/dist', 'index.html'))
 })
 
 const PORT = process.env.PORT || 5000
