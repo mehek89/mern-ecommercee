@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { getProductsApi } from '../api/productApi'
 
 const CATEGORIES = ['All', 'Electronics', 'Fashion', 'Home', 'Books', 'Sports']
@@ -12,10 +12,11 @@ const SORT_OPTIONS = [
 ]
 
 function ProductList() {
+  const [searchParams] = useSearchParams()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [category, setCategory] = useState('All')
+  const [search, setSearch] = useState(searchParams.get('search') || '')
+  const [category, setCategory] = useState(searchParams.get('category') || 'All')
   const [brand, setBrand] = useState('All')
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
@@ -46,6 +47,12 @@ function ProductList() {
   useEffect(() => {
     fetchProducts()
   }, [category, brand, sort, rating])
+
+  useEffect(() => {
+    if (searchParams.get('search') || searchParams.get('category')) {
+      fetchProducts()
+    }
+  }, [searchParams])
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -91,10 +98,7 @@ function ProductList() {
           <div className="bg-white rounded-xl shadow p-4 sticky top-20">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-gray-800 text-lg">Filters</h3>
-              <button
-                onClick={handleReset}
-                className="text-blue-600 text-sm hover:underline"
-              >
+              <button onClick={handleReset} className="text-blue-600 text-sm hover:underline">
                 Reset all
               </button>
             </div>
@@ -111,7 +115,6 @@ function ProductList() {
                       value={cat}
                       checked={category === cat}
                       onChange={() => setCategory(cat)}
-                      className="text-blue-600"
                     />
                     <span className="text-gray-600 text-sm">{cat}</span>
                   </label>
@@ -158,7 +161,6 @@ function ProductList() {
                       value={b}
                       checked={brand === b}
                       onChange={() => setBrand(b)}
-                      className="text-blue-600"
                     />
                     <span className="text-gray-600 text-sm">{b}</span>
                   </label>
@@ -178,10 +180,9 @@ function ProductList() {
                       value={r}
                       checked={rating === String(r)}
                       onChange={() => setRating(String(r))}
-                      className="text-blue-600"
                     />
                     <span className="text-yellow-400 text-sm">
-                      {'★'.repeat(r)}{'☆'.repeat(5-r)}
+                      {'★'.repeat(r)}{'☆'.repeat(5 - r)}
                     </span>
                   </label>
                 ))}
@@ -192,7 +193,6 @@ function ProductList() {
 
         {/* Products Grid */}
         <div className="flex-1">
-          {/* Sort & Results count */}
           <div className="flex justify-between items-center mb-4 bg-white rounded-xl shadow px-4 py-3">
             <p className="text-gray-600 text-sm">
               {loading ? 'Loading...' : `${products.length} products found`}
@@ -219,7 +219,6 @@ function ProductList() {
             🔧 {showFilters ? 'Hide Filters' : 'Show Filters'}
           </button>
 
-          {/* Mobile filters */}
           {showFilters && (
             <div className="md:hidden bg-white rounded-xl shadow p-4 mb-4">
               <div className="grid grid-cols-2 gap-4">

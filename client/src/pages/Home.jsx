@@ -31,24 +31,26 @@ function Home() {
     navigate('/login')
   }
 
-  const filtered = products.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  )
+  const handleSearch = (e) => {
+    e.preventDefault()
+    navigate(`/products?search=${search}`)
+  }
+
+  const handleCategory = (cat) => {
+    navigate(`/products?category=${cat}`)
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">
-
       {/* Top Navbar */}
       <nav className="bg-blue-600 text-white px-4 py-3 sticky top-0 z-50 shadow-md">
         <div className="max-w-7xl mx-auto flex items-center gap-4">
-
-          {/* Logo */}
           <Link to="/" className="text-2xl font-bold whitespace-nowrap">
             🛒 ShopMERN
           </Link>
 
           {/* Search Bar */}
-          <div className="flex flex-1 max-w-2xl">
+          <form onSubmit={handleSearch} className="flex flex-1 max-w-2xl">
             <input
               type="text"
               placeholder="Search for products..."
@@ -56,10 +58,10 @@ function Home() {
               onChange={(e) => setSearch(e.target.value)}
               className="w-full px-4 py-2 text-gray-800 rounded-l-md focus:outline-none"
             />
-            <button className="bg-yellow-400 px-4 py-2 rounded-r-md hover:bg-yellow-500">
+            <button type="submit" className="bg-yellow-400 px-4 py-2 rounded-r-md hover:bg-yellow-500">
               🔍
             </button>
-          </div>
+          </form>
 
           {/* Nav Links */}
           <div className="flex items-center gap-4 ml-auto whitespace-nowrap">
@@ -94,9 +96,10 @@ function Home() {
 
       {/* Category Pills */}
       <div className="max-w-7xl mx-auto px-4 py-4 flex gap-3 overflow-x-auto">
-        {['All', 'Electronics', 'Fashion', 'Home', 'Books', 'Sports'].map(cat => (
+        {['Electronics', 'Fashion', 'Home', 'Books', 'Sports'].map(cat => (
           <button
             key={cat}
+            onClick={() => handleCategory(cat)}
             className="bg-white px-4 py-2 rounded-full shadow text-sm font-medium hover:bg-blue-600 hover:text-white transition whitespace-nowrap"
           >
             {cat}
@@ -106,9 +109,12 @@ function Home() {
 
       {/* Products Grid */}
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">
-          {search ? `Results for "${search}"` : '🔥 Featured Products'}
-        </h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">🔥 Featured Products</h2>
+          <Link to="/products" className="text-blue-600 hover:underline text-sm">
+            View all →
+          </Link>
+        </div>
 
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -116,13 +122,13 @@ function Home() {
               <div key={i} className="bg-white rounded-xl h-64 animate-pulse" />
             ))}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-gray-500 text-xl">No products found</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {filtered.map((product) => (
+            {products.slice(0, 8).map((product) => (
               <Link
                 to={`/products/${product._id}`}
                 key={product._id}
@@ -146,7 +152,10 @@ function Home() {
                       In Stock
                     </span>
                   </div>
-                  <div className="text-yellow-400 text-xs mt-1">★★★★☆</div>
+                  <div className="text-yellow-400 text-xs mt-1">
+                    {'★'.repeat(Math.round(product.ratings))}
+                    {'☆'.repeat(5 - Math.round(product.ratings))}
+                  </div>
                 </div>
               </Link>
             ))}
