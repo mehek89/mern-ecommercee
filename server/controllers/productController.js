@@ -1,9 +1,57 @@
 import Product from '../models/Product.js'
 
-// Get all products
+// Get all products with search & filters
 export const getProducts = async (req, res) => {
   try {
-    const products = await Product.find({})
+    const {
+      search,
+      category,
+      brand,
+      minPrice,
+      maxPrice,
+      rating,
+      sort
+    } = req.query
+
+    // Build filter object
+    let filter = {}
+
+    // Search by name
+    if (search) {
+      filter.name = { $regex: search, $options: 'i' }
+    }
+
+    // Filter by category
+    if (category && category !== 'All') {
+      filter.category = category
+    }
+
+    // Filter by brand
+    if (brand) {
+      filter.brand = { $regex: brand, $options: 'i' }
+    }
+
+    // Filter by price range
+    if (minPrice || maxPrice) {
+      filter.price = {}
+      if (minPrice) filter.price.$gte = Number(minPrice)
+      if (maxPrice) filter.price.$lte = Number(maxPrice)
+    }
+
+    // Filter by rating
+    if (rating) {
+      filter.ratings = { $gte: Number(rating) }
+    }
+
+    // Build sort object
+    let sortObj = {}
+    if (sort === 'price_asc') sortObj.price = 1
+    else if (sort === 'price_desc') sortObj.price = -1
+    else if (sort === 'rating') sortObj.ratings = -1
+    else if (sort === 'newest') sortObj.createdAt = -1
+    else sortObj.createdAt = -1
+
+    const products = await Product.find(filter).sort(sortObj)
     res.json(products)
   } catch (error) {
     res.status(500).json({ message: error.message })
@@ -33,13 +81,7 @@ export const createProduct = async (req, res) => {
     }
 
     const product = await Product.create({
-      name,
-      description,
-      price,
-      category,
-      brand,
-      stock,
-      images
+      name, description, price, category, brand, stock, images
     })
 
     res.status(201).json(product)
