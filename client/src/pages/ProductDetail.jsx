@@ -5,6 +5,7 @@ import { getProductByIdApi } from '../api/productApi'
 import { addToCartApi } from '../api/cartApi'
 import { setCart } from '../redux/slices/cartSlice'
 import axiosInstance from '../api/axiosInstance'
+import { addToWishlistApi, removeFromWishlistApi, getWishlistApi } from '../api/wishlistApi'
 
 function ProductDetail() {
   const { id } = useParams()
@@ -19,6 +20,8 @@ function ProductDetail() {
   const [hoveredStar, setHoveredStar] = useState(0)
   const [mediaFiles, setMediaFiles] = useState([])
   const [mediaPreviews, setMediaPreviews] = useState([])
+  const [inWishlist, setInWishlist] = useState(false)
+  const [wishlistLoading, setWishlistLoading] = useState(false)
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { user } = useSelector((state) => state.auth)
@@ -38,6 +41,15 @@ function ProductDetail() {
     fetchProduct()
   }, [id])
 
+  useEffect(() => {
+    if (user) {
+      getWishlistApi().then(({ data }) => {
+        const ids = data.products?.map(p => p._id || p) || []
+        setInWishlist(ids.includes(id))
+      }).catch(err => console.log(err))
+    }
+  }, [user, id])
+
   const handleAddToCart = async () => {
     if (!user) { navigate('/login'); return }
     setAdding(true)
@@ -56,6 +68,27 @@ function ProductDetail() {
       setMessage('❌ Failed to add to cart')
     } finally {
       setAdding(false)
+    }
+  }
+
+  const handleWishlist = async () => {
+    if (!user) { navigate('/login'); return }
+    setWishlistLoading(true)
+    try {
+      if (inWishlist) {
+        await removeFromWishlistApi(product._id)
+        setInWishlist(false)
+        setMessage('💔 Removed from wishlist')
+      } else {
+        await addToWishlistApi(product._id)
+        setInWishlist(true)
+        setMessage('🤍 Added to wishlist!')
+      }
+      setTimeout(() => setMessage(''), 2000)
+    } catch (error) {
+      console.log(error)
+    } finally {
+      setWishlistLoading(false)
     }
   }
 
@@ -128,6 +161,7 @@ function ProductDetail() {
           <Link to="/" className="text-2xl font-bold">🛒 ShopMERN</Link>
           <div className="ml-auto flex gap-4">
             <Link to="/products" className="text-sm hover:text-yellow-300">Products</Link>
+            <Link to="/wishlist" className="text-sm hover:text-yellow-300">🤍 Wishlist</Link>
             <Link to="/cart" className="text-sm hover:text-yellow-300">🛒 Cart</Link>
           </div>
         </div>
@@ -162,16 +196,33 @@ function ProductDetail() {
             <p className="text-sm text-gray-500 mb-6">
               {product.stock > 0 ? `✅ ${product.stock} in stock` : '❌ Out of stock'}
             </p>
+
             {message && (
               <div className="bg-green-100 text-green-700 p-3 rounded mb-4">{message}</div>
             )}
-            <button
-              onClick={handleAddToCart}
-              disabled={adding || product.stock === 0}
-              className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 w-full md:w-auto"
-            >
-              {adding ? 'Adding...' : '🛒 Add to Cart'}
-            </button>
+
+            {/* Buttons */}
+            <div className="flex gap-3 flex-wrap">
+              <button
+                onClick={handleAddToCart}
+                disabled={adding || product.stock === 0}
+                className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+              >
+                {adding ? 'Adding...' : '🛒 Add to Cart'}
+              </button>
+
+              <button
+                onClick={handleWishlist}
+                disabled={wishlistLoading}
+                className={`px-6 py-3 rounded-lg transition font-medium border ${
+                  inWishlist
+                    ? 'bg-red-50 text-red-500 border-red-300 hover:bg-red-100'
+                    : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
+                }`}
+              >
+                {wishlistLoading ? '...' : inWishlist ? '♥ Wishlisted' : '🤍 Add to Wishlist'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -228,45 +279,23 @@ function ProductDetail() {
                 <div>
                   <label className="text-gray-700 font-medium mb-1 block">Add Media (optional)</label>
                   <p className="text-xs text-gray-400 mb-2">Select multiple images + 1 video + 1 audio</p>
-
                   <div className="flex flex-col gap-2">
-                    {/* Images */}
                     <label className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:bg-gray-100 transition">
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        onChange={(e) => addFiles(Array.from(e.target.files), 'image')}
-                        className="hidden"
-                      />
+                      <input type="file" multiple accept="image/*" onChange={(e) => addFiles(Array.from(e.target.files), 'image')} className="hidden" />
                       <div className="flex items-center gap-2 text-gray-600 text-sm">
                         <span className="text-xl">🖼️</span>
                         <span>Select Images (multiple allowed)</span>
                       </div>
                     </label>
-
-                    {/* Video */}
                     <label className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:bg-gray-100 transition">
-                      <input
-                        type="file"
-                        accept="video/*"
-                        onChange={(e) => e.target.files[0] && addFiles([e.target.files[0]], 'video')}
-                        className="hidden"
-                      />
+                      <input type="file" accept="video/*" onChange={(e) => e.target.files[0] && addFiles([e.target.files[0]], 'video')} className="hidden" />
                       <div className="flex items-center gap-2 text-gray-600 text-sm">
                         <span className="text-xl">🎥</span>
                         <span>Select Video (1 allowed)</span>
                       </div>
                     </label>
-
-                    {/* Audio */}
                     <label className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:bg-gray-100 transition">
-                      <input
-                        type="file"
-                        accept="audio/*"
-                        onChange={(e) => e.target.files[0] && addFiles([e.target.files[0]], 'audio')}
-                        className="hidden"
-                      />
+                      <input type="file" accept="audio/*" onChange={(e) => e.target.files[0] && addFiles([e.target.files[0]], 'audio')} className="hidden" />
                       <div className="flex items-center gap-2 text-gray-600 text-sm">
                         <span className="text-xl">🎵</span>
                         <span>Select Audio (1 allowed)</span>
@@ -274,7 +303,6 @@ function ProductDetail() {
                     </label>
                   </div>
 
-                  {/* Previews */}
                   {mediaPreviews.length > 0 && (
                     <div className="mt-3">
                       <p className="text-xs text-gray-500 mb-2">Selected files ({mediaPreviews.length}):</p>
@@ -294,9 +322,7 @@ function ProductDetail() {
                               type="button"
                               onClick={() => removeFile(index)}
                               className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-red-600"
-                            >
-                              ×
-                            </button>
+                            >×</button>
                           </div>
                         ))}
                       </div>
@@ -343,30 +369,18 @@ function ProductDetail() {
                       {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
                     </div>
                     <p className="text-gray-600 text-sm mb-2">{review.comment}</p>
-
-                    {/* Review Images */}
                     {review.images && review.images.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-2">
                         {review.images.map((img, i) => (
-                          <img
-                            key={i}
-                            src={img}
-                            alt="review"
-                            className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80"
-                            onClick={() => window.open(img, '_blank')}
-                          />
+                          <img key={i} src={img} alt="review" className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80" onClick={() => window.open(img, '_blank')} />
                         ))}
                       </div>
                     )}
-
-                    {/* Review Video */}
                     {review.video && (
                       <video controls className="w-full rounded mb-2 max-h-48">
                         <source src={review.video} />
                       </video>
                     )}
-
-                    {/* Review Audio */}
                     {review.audio && (
                       <div className="bg-gray-50 rounded-lg p-2 mb-2">
                         <p className="text-xs text-gray-500 mb-1">🎵 Audio Review</p>
