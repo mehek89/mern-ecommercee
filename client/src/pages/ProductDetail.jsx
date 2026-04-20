@@ -39,10 +39,7 @@ function ProductDetail() {
   }, [id])
 
   const handleAddToCart = async () => {
-    if (!user) {
-      navigate('/login')
-      return
-    }
+    if (!user) { navigate('/login'); return }
     setAdding(true)
     try {
       const { data } = await addToCartApi({
@@ -62,31 +59,36 @@ function ProductDetail() {
     }
   }
 
-  const handleMediaChange = (e) => {
-    const files = Array.from(e.target.files)
-    setMediaFiles(files)
-    const previews = files.map(file => ({
-      url: URL.createObjectURL(file),
-      type: file.type,
-      name: file.name
-    }))
-    setMediaPreviews(previews)
+  const addFiles = (files, type) => {
+    setMediaFiles(prev => {
+      const others = prev.filter(f => !f.type.startsWith(type))
+      return [...others, ...files]
+    })
+    setMediaPreviews(prev => {
+      const others = prev.filter(p => !p.type.startsWith(type))
+      const newPreviews = files.map(f => ({
+        url: URL.createObjectURL(f),
+        type: f.type,
+        name: f.name
+      }))
+      return [...others, ...newPreviews]
+    })
+  }
+
+  const removeFile = (index) => {
+    setMediaFiles(prev => prev.filter((_, i) => i !== index))
+    setMediaPreviews(prev => prev.filter((_, i) => i !== index))
   }
 
   const handleReview = async (e) => {
     e.preventDefault()
-    if (!user) {
-      navigate('/login')
-      return
-    }
+    if (!user) { navigate('/login'); return }
     setReviewLoading(true)
     try {
       const formData = new FormData()
       formData.append('rating', rating)
       formData.append('comment', comment)
-      mediaFiles.forEach(file => {
-        formData.append('media', file)
-      })
+      mediaFiles.forEach(file => formData.append('media', file))
 
       await axiosInstance.post(`/products/${id}/reviews`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -106,21 +108,17 @@ function ProductDetail() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-xl text-gray-500">Loading...</p>
-      </div>
-    )
-  }
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <p className="text-xl text-gray-500">Loading...</p>
+    </div>
+  )
 
-  if (!product) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-xl text-gray-500">Product not found</p>
-      </div>
-    )
-  }
+  if (!product) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <p className="text-xl text-gray-500">Product not found</p>
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -150,8 +148,6 @@ function ProductDetail() {
           <div className="flex-1">
             <h2 className="text-3xl font-bold text-gray-800 mb-2">{product.name}</h2>
             <p className="text-gray-500 mb-2">{product.category} • {product.brand}</p>
-
-            {/* Rating Summary */}
             <div className="flex items-center gap-2 mb-4">
               <div className="text-yellow-400 text-xl">
                 {'★'.repeat(Math.round(product.ratings))}
@@ -161,19 +157,14 @@ function ProductDetail() {
                 {product.ratings.toFixed(1)} ({product.numReviews} reviews)
               </span>
             </div>
-
             <p className="text-gray-600 mb-6">{product.description}</p>
             <p className="text-3xl font-bold text-blue-600 mb-4">${product.price}</p>
             <p className="text-sm text-gray-500 mb-6">
               {product.stock > 0 ? `✅ ${product.stock} in stock` : '❌ Out of stock'}
             </p>
-
             {message && (
-              <div className="bg-green-100 text-green-700 p-3 rounded mb-4">
-                {message}
-              </div>
+              <div className="bg-green-100 text-green-700 p-3 rounded mb-4">{message}</div>
             )}
-
             <button
               onClick={handleAddToCart}
               disabled={adding || product.stock === 0}
@@ -211,9 +202,7 @@ function ProductDetail() {
                         onMouseLeave={() => setHoveredStar(0)}
                         className="text-3xl transition"
                       >
-                        <span className={star <= (hoveredStar || rating) ? 'text-yellow-400' : 'text-gray-300'}>
-                          ★
-                        </span>
+                        <span className={star <= (hoveredStar || rating) ? 'text-yellow-400' : 'text-gray-300'}>★</span>
                       </button>
                     ))}
                   </div>
@@ -237,42 +226,80 @@ function ProductDetail() {
 
                 {/* Media Upload */}
                 <div>
-                  <label className="text-gray-700 font-medium mb-2 block">
-                    Add Images / Video / Audio (optional)
-                  </label>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*,video/*,audio/*"
-                    onChange={handleMediaChange}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-600"
-                  />
+                  <label className="text-gray-700 font-medium mb-1 block">Add Media (optional)</label>
+                  <p className="text-xs text-gray-400 mb-2">Select multiple images + 1 video + 1 audio</p>
+
+                  <div className="flex flex-col gap-2">
+                    {/* Images */}
+                    <label className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:bg-gray-100 transition">
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={(e) => addFiles(Array.from(e.target.files), 'image')}
+                        className="hidden"
+                      />
+                      <div className="flex items-center gap-2 text-gray-600 text-sm">
+                        <span className="text-xl">🖼️</span>
+                        <span>Select Images (multiple allowed)</span>
+                      </div>
+                    </label>
+
+                    {/* Video */}
+                    <label className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:bg-gray-100 transition">
+                      <input
+                        type="file"
+                        accept="video/*"
+                        onChange={(e) => e.target.files[0] && addFiles([e.target.files[0]], 'video')}
+                        className="hidden"
+                      />
+                      <div className="flex items-center gap-2 text-gray-600 text-sm">
+                        <span className="text-xl">🎥</span>
+                        <span>Select Video (1 allowed)</span>
+                      </div>
+                    </label>
+
+                    {/* Audio */}
+                    <label className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:bg-gray-100 transition">
+                      <input
+                        type="file"
+                        accept="audio/*"
+                        onChange={(e) => e.target.files[0] && addFiles([e.target.files[0]], 'audio')}
+                        className="hidden"
+                      />
+                      <div className="flex items-center gap-2 text-gray-600 text-sm">
+                        <span className="text-xl">🎵</span>
+                        <span>Select Audio (1 allowed)</span>
+                      </div>
+                    </label>
+                  </div>
 
                   {/* Previews */}
                   {mediaPreviews.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {mediaPreviews.map((preview, index) => (
-                        <div key={index} className="relative rounded overflow-hidden border border-gray-200">
-                          {preview.type.startsWith('image') && (
-                            <img
-                              src={preview.url}
-                              alt="preview"
-                              className="w-16 h-16 object-cover"
-                            />
-                          )}
-                          {preview.type.startsWith('video') && (
-                            <video
-                              src={preview.url}
-                              className="w-16 h-16 object-cover"
-                            />
-                          )}
-                          {preview.type.startsWith('audio') && (
-                            <div className="w-16 h-16 bg-blue-100 flex items-center justify-center text-2xl">
-                              🎵
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                    <div className="mt-3">
+                      <p className="text-xs text-gray-500 mb-2">Selected files ({mediaPreviews.length}):</p>
+                      <div className="flex flex-wrap gap-2">
+                        {mediaPreviews.map((preview, index) => (
+                          <div key={index} className="relative">
+                            {preview.type.startsWith('image') && (
+                              <img src={preview.url} alt="preview" className="w-16 h-16 object-cover rounded border border-gray-200" />
+                            )}
+                            {preview.type.startsWith('video') && (
+                              <div className="w-16 h-16 bg-purple-100 rounded border border-purple-200 flex items-center justify-center text-2xl">🎥</div>
+                            )}
+                            {preview.type.startsWith('audio') && (
+                              <div className="w-16 h-16 bg-blue-100 rounded border border-blue-200 flex items-center justify-center text-2xl">🎵</div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeFile(index)}
+                              className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-red-600"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -286,9 +313,9 @@ function ProductDetail() {
                 <button
                   type="submit"
                   disabled={reviewLoading}
-                  className="bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                  className="bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 font-medium"
                 >
-                  {reviewLoading ? 'Uploading & Submitting...' : 'Submit Review'}
+                  {reviewLoading ? '⏳ Uploading & Submitting...' : '⭐ Submit Review'}
                 </button>
               </form>
             )}
@@ -303,7 +330,7 @@ function ProductDetail() {
             {product.reviews.length === 0 ? (
               <p className="text-gray-500">No reviews yet. Be the first to review!</p>
             ) : (
-              <div className="flex flex-col gap-4 max-h-96 overflow-y-auto">
+              <div className="flex flex-col gap-4 max-h-96 overflow-y-auto pr-1">
                 {product.reviews.map((review) => (
                   <div key={review._id} className="border-b pb-4 last:border-0">
                     <div className="flex items-center justify-between mb-1">
@@ -334,12 +361,8 @@ function ProductDetail() {
 
                     {/* Review Video */}
                     {review.video && (
-                      <video
-                        controls
-                        className="w-full rounded mb-2 max-h-48"
-                      >
+                      <video controls className="w-full rounded mb-2 max-h-48">
                         <source src={review.video} />
-                        Your browser does not support the video tag.
                       </video>
                     )}
 
@@ -349,7 +372,6 @@ function ProductDetail() {
                         <p className="text-xs text-gray-500 mb-1">🎵 Audio Review</p>
                         <audio controls className="w-full">
                           <source src={review.audio} />
-                          Your browser does not support the audio tag.
                         </audio>
                       </div>
                     )}
