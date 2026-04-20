@@ -1,4 +1,5 @@
 import Product from '../models/Product.js'
+import { upload } from '../config/cloudinary.js'
 
 // Get all products with search & filters
 export const getProducts = async (req, res) => {
@@ -129,7 +130,7 @@ export const deleteProduct = async (req, res) => {
     res.status(500).json({ message: error.message })
   }
 }
-// Add review
+// Add review with media
 export const addReview = async (req, res) => {
   try {
     const { rating, comment } = req.body
@@ -139,7 +140,6 @@ export const addReview = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' })
     }
 
-    // Check if user already reviewed
     const alreadyReviewed = product.reviews.find(
       r => r.user.toString() === req.user._id.toString()
     )
@@ -148,11 +148,31 @@ export const addReview = async (req, res) => {
       return res.status(400).json({ message: 'You already reviewed this product' })
     }
 
+    // Handle uploaded files
+    const images = []
+    let video = ''
+    let audio = ''
+
+    if (req.files) {
+      for (const file of req.files) {
+        if (file.mimetype.startsWith('image')) {
+          images.push(file.path)
+        } else if (file.mimetype.startsWith('video')) {
+          video = file.path
+        } else if (file.mimetype.startsWith('audio')) {
+          audio = file.path
+        }
+      }
+    }
+
     const review = {
       user: req.user._id,
       name: req.user.name,
       rating: Number(rating),
-      comment
+      comment,
+      images,
+      video,
+      audio
     }
 
     product.reviews.push(review)

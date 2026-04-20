@@ -17,6 +17,8 @@ function ProductDetail() {
   const [reviewLoading, setReviewLoading] = useState(false)
   const [reviewMessage, setReviewMessage] = useState('')
   const [hoveredStar, setHoveredStar] = useState(0)
+  const [mediaFiles, setMediaFiles] = useState([])
+  const [mediaPreviews, setMediaPreviews] = useState([])
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { user } = useSelector((state) => state.auth)
@@ -60,6 +62,17 @@ function ProductDetail() {
     }
   }
 
+  const handleMediaChange = (e) => {
+    const files = Array.from(e.target.files)
+    setMediaFiles(files)
+    const previews = files.map(file => ({
+      url: URL.createObjectURL(file),
+      type: file.type,
+      name: file.name
+    }))
+    setMediaPreviews(previews)
+  }
+
   const handleReview = async (e) => {
     e.preventDefault()
     if (!user) {
@@ -68,10 +81,22 @@ function ProductDetail() {
     }
     setReviewLoading(true)
     try {
-      await axiosInstance.post(`/products/${id}/reviews`, { rating, comment })
+      const formData = new FormData()
+      formData.append('rating', rating)
+      formData.append('comment', comment)
+      mediaFiles.forEach(file => {
+        formData.append('media', file)
+      })
+
+      await axiosInstance.post(`/products/${id}/reviews`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+
       setReviewMessage('✅ Review submitted!')
       setComment('')
       setRating(5)
+      setMediaFiles([])
+      setMediaPreviews([])
       fetchProduct()
       setTimeout(() => setReviewMessage(''), 3000)
     } catch (error) {
@@ -140,9 +165,7 @@ function ProductDetail() {
             <p className="text-gray-600 mb-6">{product.description}</p>
             <p className="text-3xl font-bold text-blue-600 mb-4">${product.price}</p>
             <p className="text-sm text-gray-500 mb-6">
-              {product.stock > 0
-                ? `✅ ${product.stock} in stock`
-                : '❌ Out of stock'}
+              {product.stock > 0 ? `✅ ${product.stock} in stock` : '❌ Out of stock'}
             </p>
 
             {message && (
@@ -174,6 +197,7 @@ function ProductDetail() {
               </p>
             ) : (
               <form onSubmit={handleReview} className="flex flex-col gap-4">
+
                 {/* Star Rating */}
                 <div>
                   <label className="text-gray-700 font-medium mb-2 block">Your Rating</label>
@@ -211,6 +235,48 @@ function ProductDetail() {
                   />
                 </div>
 
+                {/* Media Upload */}
+                <div>
+                  <label className="text-gray-700 font-medium mb-2 block">
+                    Add Images / Video / Audio (optional)
+                  </label>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*,video/*,audio/*"
+                    onChange={handleMediaChange}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-600"
+                  />
+
+                  {/* Previews */}
+                  {mediaPreviews.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {mediaPreviews.map((preview, index) => (
+                        <div key={index} className="relative rounded overflow-hidden border border-gray-200">
+                          {preview.type.startsWith('image') && (
+                            <img
+                              src={preview.url}
+                              alt="preview"
+                              className="w-16 h-16 object-cover"
+                            />
+                          )}
+                          {preview.type.startsWith('video') && (
+                            <video
+                              src={preview.url}
+                              className="w-16 h-16 object-cover"
+                            />
+                          )}
+                          {preview.type.startsWith('audio') && (
+                            <div className="w-16 h-16 bg-blue-100 flex items-center justify-center text-2xl">
+                              🎵
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {reviewMessage && (
                   <div className={`p-3 rounded ${reviewMessage.includes('✅') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                     {reviewMessage}
@@ -222,7 +288,7 @@ function ProductDetail() {
                   disabled={reviewLoading}
                   className="bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
                 >
-                  {reviewLoading ? 'Submitting...' : 'Submit Review'}
+                  {reviewLoading ? 'Uploading & Submitting...' : 'Submit Review'}
                 </button>
               </form>
             )}
@@ -249,7 +315,44 @@ function ProductDetail() {
                     <div className="text-yellow-400 text-sm mb-2">
                       {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
                     </div>
-                    <p className="text-gray-600 text-sm">{review.comment}</p>
+                    <p className="text-gray-600 text-sm mb-2">{review.comment}</p>
+
+                    {/* Review Images */}
+                    {review.images && review.images.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {review.images.map((img, i) => (
+                          <img
+                            key={i}
+                            src={img}
+                            alt="review"
+                            className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80"
+                            onClick={() => window.open(img, '_blank')}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Review Video */}
+                    {review.video && (
+                      <video
+                        controls
+                        className="w-full rounded mb-2 max-h-48"
+                      >
+                        <source src={review.video} />
+                        Your browser does not support the video tag.
+                      </video>
+                    )}
+
+                    {/* Review Audio */}
+                    {review.audio && (
+                      <div className="bg-gray-50 rounded-lg p-2 mb-2">
+                        <p className="text-xs text-gray-500 mb-1">🎵 Audio Review</p>
+                        <audio controls className="w-full">
+                          <source src={review.audio} />
+                          Your browser does not support the audio tag.
+                        </audio>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
