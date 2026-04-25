@@ -91,7 +91,6 @@ export const createProduct = async (req, res) => {
   }
 }
 
-// Update product (admin only)
 export const updateProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id)
@@ -99,7 +98,7 @@ export const updateProduct = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' })
     }
 
-    const { name, description, price, category, brand, stock, images } = req.body
+    const { name, description, price, category, brand, stock, images, sizes, colors } = req.body
 
     product.name = name || product.name
     product.description = description || product.description
@@ -108,6 +107,8 @@ export const updateProduct = async (req, res) => {
     product.brand = brand || product.brand
     product.stock = stock || product.stock
     product.images = images || product.images
+    if (sizes) product.sizes = sizes
+    if (colors) product.colors = colors
 
     const updatedProduct = await product.save()
     res.json(updatedProduct)
