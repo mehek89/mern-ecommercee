@@ -15,16 +15,17 @@ function Wishlist() {
     fetchWishlist()
   }, [])
 
-  const fetchWishlist = async () => {
-    try {
-      const { data } = await getWishlistApi()
-      setWishlist(data.products || [])
-    } catch (error) {
-      console.log(error)
-    } finally {
-      setLoading(false)
-    }
+ const fetchWishlist = async () => {
+  try {
+    const { data } = await getWishlistApi()
+    console.log('Wishlist data:', data)
+    setWishlist(data.products || [])
+  } catch (error) {
+    console.log(error)
+  } finally {
+    setLoading(false)
   }
+}
 
   const handleRemove = async (productId) => {
     try {
