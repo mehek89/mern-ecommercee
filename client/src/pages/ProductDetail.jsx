@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { getProductByIdApi } from '../api/productApi'
+import { getProductByIdApi, getRelatedProductsApi } from '../api/productApi'
 import { addToCartApi } from '../api/cartApi'
 import { setCart } from '../redux/slices/cartSlice'
 import axiosInstance from '../api/axiosInstance'
@@ -24,6 +24,7 @@ function ProductDetail() {
   const [wishlistLoading, setWishlistLoading] = useState(false)
   const [selectedSize, setSelectedSize] = useState('')
   const [selectedColor, setSelectedColor] = useState('')
+  const [relatedProducts, setRelatedProducts] = useState([])
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { user } = useSelector((state) => state.auth)
@@ -39,7 +40,22 @@ function ProductDetail() {
     }
   }
 
-  useEffect(() => { fetchProduct() }, [id])
+  const fetchRelated = async () => {
+    try {
+      const { data } = await getRelatedProductsApi(id)
+      setRelatedProducts(data)
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  useEffect(() => {
+    fetchProduct()
+    fetchRelated()
+    setSelectedSize('')
+    setSelectedColor('')
+    window.scrollTo(0, 0)
+  }, [id])
 
   useEffect(() => {
     if (user) {
@@ -205,16 +221,10 @@ function ProductDetail() {
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {product.sizes.map((size) => (
-                    <button
-                      key={size}
-                      type="button"
-                      onClick={() => setSelectedSize(size)}
+                    <button key={size} type="button" onClick={() => setSelectedSize(size)}
                       className={`px-4 py-2 rounded-lg border font-medium text-sm transition ${
-                        selectedSize === size
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
-                      }`}
-                    >
+                        selectedSize === size ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                      }`}>
                       {size}
                     </button>
                   ))}
@@ -230,20 +240,12 @@ function ProductDetail() {
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {product.colors.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => setSelectedColor(color)}
+                    <button key={color} type="button" onClick={() => setSelectedColor(color)}
                       className={`px-4 py-2 rounded-lg border font-medium text-sm transition flex items-center gap-2 ${
-                        selectedColor === color
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
-                      }`}
-                    >
-                      <span
-                        className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0"
-                        style={{ backgroundColor: color.toLowerCase() }}
-                      />
+                        selectedColor === color ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                      }`}>
+                      <span className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0"
+                        style={{ backgroundColor: color.toLowerCase() }} />
                       {color}
                     </button>
                   ))}
@@ -259,22 +261,14 @@ function ProductDetail() {
 
             {/* Buttons */}
             <div className="flex gap-3 flex-wrap">
-              <button
-                onClick={handleAddToCart}
-                disabled={adding || product.stock === 0}
-                className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-              >
+              <button onClick={handleAddToCart} disabled={adding || product.stock === 0}
+                className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50">
                 {adding ? 'Adding...' : '🛒 Add to Cart'}
               </button>
-              <button
-                onClick={handleWishlist}
-                disabled={wishlistLoading}
+              <button onClick={handleWishlist} disabled={wishlistLoading}
                 className={`px-6 py-3 rounded-lg transition font-medium border ${
-                  inWishlist
-                    ? 'bg-red-50 text-red-500 border-red-300 hover:bg-red-100'
-                    : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
-                }`}
-              >
+                  inWishlist ? 'bg-red-50 text-red-500 border-red-300 hover:bg-red-100' : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
+                }`}>
                 {wishlistLoading ? '...' : inWishlist ? '♥ Wishlisted' : '🤍 Add to Wishlist'}
               </button>
             </div>
@@ -282,8 +276,7 @@ function ProductDetail() {
         </div>
 
         {/* Reviews Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* Write Review */}
           <div className="bg-white rounded-xl shadow p-6">
             <h3 className="text-xl font-bold text-gray-800 mb-4">Write a Review</h3>
@@ -308,14 +301,12 @@ function ProductDetail() {
                     {rating === 1 ? 'Poor' : rating === 2 ? 'Fair' : rating === 3 ? 'Good' : rating === 4 ? 'Very Good' : 'Excellent'}
                   </p>
                 </div>
-
                 <div>
                   <label className="text-gray-700 font-medium mb-2 block">Your Review</label>
                   <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={4}
                     placeholder="Share your experience with this product..."
                     className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" required />
                 </div>
-
                 <div>
                   <label className="text-gray-700 font-medium mb-1 block">Add Media (optional)</label>
                   <p className="text-xs text-gray-400 mb-2">Select multiple images + 1 video + 1 audio</p>
@@ -350,7 +341,6 @@ function ProductDetail() {
                     </div>
                   )}
                 </div>
-
                 {reviewMessage && (
                   <div className={`p-3 rounded ${reviewMessage.includes('✅') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                     {reviewMessage}
@@ -405,6 +395,36 @@ function ProductDetail() {
             )}
           </div>
         </div>
+
+        {/* Related Products */}
+        {relatedProducts.length > 0 && (
+          <div className="mt-4">
+            <h3 className="text-2xl font-bold text-gray-800 mb-4">🔗 You Might Also Like</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {relatedProducts.map((related) => (
+                <Link to={`/products/${related._id}`} key={related._id}
+                  className="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden group">
+                  <div className="overflow-hidden">
+                    <img
+                      src={related.images[0] || 'https://via.placeholder.com/300'}
+                      alt={related.name}
+                      className="w-full h-40 object-cover group-hover:scale-105 transition duration-300"
+                    />
+                  </div>
+                  <div className="p-3">
+                    <h4 className="font-semibold text-gray-800 text-sm mb-1 truncate">{related.name}</h4>
+                    <p className="text-gray-400 text-xs mb-1">{related.brand}</p>
+                    <p className="text-blue-600 font-bold">${related.price}</p>
+                    <div className="text-yellow-400 text-xs mt-1">
+                      {'★'.repeat(Math.round(related.ratings))}
+                      {'☆'.repeat(5 - Math.round(related.ratings))}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

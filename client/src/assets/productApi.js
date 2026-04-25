@@ -1,0 +1,1 @@
+export const getRelatedProductsApi = (id) => axiosInstance.get(`/products/${id}/related`)

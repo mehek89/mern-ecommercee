@@ -192,3 +192,21 @@ export const addReview = async (req, res) => {
     res.status(500).json({ message: error.message })
   }
 }
+// Get related products
+export const getRelatedProducts = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id)
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' })
+    }
+
+    const related = await Product.find({
+      category: product.category,
+      _id: { $ne: product._id }
+    }).limit(4)
+
+    res.json(related)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}
