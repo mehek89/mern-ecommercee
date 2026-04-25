@@ -22,6 +22,8 @@ function ProductDetail() {
   const [mediaPreviews, setMediaPreviews] = useState([])
   const [inWishlist, setInWishlist] = useState(false)
   const [wishlistLoading, setWishlistLoading] = useState(false)
+  const [selectedSize, setSelectedSize] = useState('')
+  const [selectedColor, setSelectedColor] = useState('')
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { user } = useSelector((state) => state.auth)
@@ -37,9 +39,7 @@ function ProductDetail() {
     }
   }
 
-  useEffect(() => {
-    fetchProduct()
-  }, [id])
+  useEffect(() => { fetchProduct() }, [id])
 
   useEffect(() => {
     if (user) {
@@ -52,11 +52,21 @@ function ProductDetail() {
 
   const handleAddToCart = async () => {
     if (!user) { navigate('/login'); return }
+    if (product.sizes && product.sizes.length > 0 && !selectedSize) {
+      setMessage('⚠️ Please select a size!')
+      setTimeout(() => setMessage(''), 2000)
+      return
+    }
+    if (product.colors && product.colors.length > 0 && !selectedColor) {
+      setMessage('⚠️ Please select a color!')
+      setTimeout(() => setMessage(''), 2000)
+      return
+    }
     setAdding(true)
     try {
       const { data } = await addToCartApi({
         productId: product._id,
-        name: product.name,
+        name: product.name + (selectedSize ? ` (${selectedSize})` : '') + (selectedColor ? ` - ${selectedColor}` : ''),
         image: product.images[0],
         price: product.price,
         quantity: 1
@@ -93,19 +103,11 @@ function ProductDetail() {
   }
 
   const addFiles = (files, type) => {
-    setMediaFiles(prev => {
-      const others = prev.filter(f => !f.type.startsWith(type))
-      return [...others, ...files]
-    })
-    setMediaPreviews(prev => {
-      const others = prev.filter(p => !p.type.startsWith(type))
-      const newPreviews = files.map(f => ({
-        url: URL.createObjectURL(f),
-        type: f.type,
-        name: f.name
-      }))
-      return [...others, ...newPreviews]
-    })
+    setMediaFiles(prev => [...prev.filter(f => !f.type.startsWith(type)), ...files])
+    setMediaPreviews(prev => [
+      ...prev.filter(p => !p.type.startsWith(type)),
+      ...files.map(f => ({ url: URL.createObjectURL(f), type: f.type, name: f.name }))
+    ])
   }
 
   const removeFile = (index) => {
@@ -122,11 +124,9 @@ function ProductDetail() {
       formData.append('rating', rating)
       formData.append('comment', comment)
       mediaFiles.forEach(file => formData.append('media', file))
-
       await axiosInstance.post(`/products/${id}/reviews`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
-
       setReviewMessage('✅ Review submitted!')
       setComment('')
       setRating(5)
@@ -191,14 +191,70 @@ function ProductDetail() {
                 {product.ratings.toFixed(1)} ({product.numReviews} reviews)
               </span>
             </div>
-            <p className="text-gray-600 mb-6">{product.description}</p>
+            <p className="text-gray-600 mb-4">{product.description}</p>
             <p className="text-3xl font-bold text-blue-600 mb-4">${product.price}</p>
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-sm text-gray-500 mb-4">
               {product.stock > 0 ? `✅ ${product.stock} in stock` : '❌ Out of stock'}
             </p>
 
+            {/* Size Variants */}
+            {product.sizes && product.sizes.length > 0 && (
+              <div className="mb-4">
+                <label className="text-gray-700 font-medium mb-2 block">
+                  Select Size: {selectedSize && <span className="text-blue-600">({selectedSize})</span>}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {product.sizes.map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => setSelectedSize(size)}
+                      className={`px-4 py-2 rounded-lg border font-medium text-sm transition ${
+                        selectedSize === size
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Color Variants */}
+            {product.colors && product.colors.length > 0 && (
+              <div className="mb-4">
+                <label className="text-gray-700 font-medium mb-2 block">
+                  Select Color: {selectedColor && <span className="text-blue-600">({selectedColor})</span>}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {product.colors.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setSelectedColor(color)}
+                      className={`px-4 py-2 rounded-lg border font-medium text-sm transition flex items-center gap-2 ${
+                        selectedColor === color
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                      }`}
+                    >
+                      <span
+                        className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0"
+                        style={{ backgroundColor: color.toLowerCase() }}
+                      />
+                      {color}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {message && (
-              <div className="bg-green-100 text-green-700 p-3 rounded mb-4">{message}</div>
+              <div className={`p-3 rounded mb-4 ${message.includes('⚠️') ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
+                {message}
+              </div>
             )}
 
             {/* Buttons */}
@@ -210,7 +266,6 @@ function ProductDetail() {
               >
                 {adding ? 'Adding...' : '🛒 Add to Cart'}
               </button>
-
               <button
                 onClick={handleWishlist}
                 disabled={wishlistLoading}
@@ -232,27 +287,19 @@ function ProductDetail() {
           {/* Write Review */}
           <div className="bg-white rounded-xl shadow p-6">
             <h3 className="text-xl font-bold text-gray-800 mb-4">Write a Review</h3>
-
             {!user ? (
               <p className="text-gray-500">
                 Please <Link to="/login" className="text-blue-600 hover:underline">login</Link> to write a review.
               </p>
             ) : (
               <form onSubmit={handleReview} className="flex flex-col gap-4">
-
-                {/* Star Rating */}
                 <div>
                   <label className="text-gray-700 font-medium mb-2 block">Your Rating</label>
                   <div className="flex gap-1">
                     {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => setRating(star)}
-                        onMouseEnter={() => setHoveredStar(star)}
-                        onMouseLeave={() => setHoveredStar(0)}
-                        className="text-3xl transition"
-                      >
+                      <button key={star} type="button" onClick={() => setRating(star)}
+                        onMouseEnter={() => setHoveredStar(star)} onMouseLeave={() => setHoveredStar(0)}
+                        className="text-3xl transition">
                         <span className={star <= (hoveredStar || rating) ? 'text-yellow-400' : 'text-gray-300'}>★</span>
                       </button>
                     ))}
@@ -262,67 +309,41 @@ function ProductDetail() {
                   </p>
                 </div>
 
-                {/* Comment */}
                 <div>
                   <label className="text-gray-700 font-medium mb-2 block">Your Review</label>
-                  <textarea
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    rows={4}
+                  <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={4}
                     placeholder="Share your experience with this product..."
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    required
-                  />
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" required />
                 </div>
 
-                {/* Media Upload */}
                 <div>
                   <label className="text-gray-700 font-medium mb-1 block">Add Media (optional)</label>
                   <p className="text-xs text-gray-400 mb-2">Select multiple images + 1 video + 1 audio</p>
                   <div className="flex flex-col gap-2">
                     <label className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:bg-gray-100 transition">
                       <input type="file" multiple accept="image/*" onChange={(e) => addFiles(Array.from(e.target.files), 'image')} className="hidden" />
-                      <div className="flex items-center gap-2 text-gray-600 text-sm">
-                        <span className="text-xl">🖼️</span>
-                        <span>Select Images (multiple allowed)</span>
-                      </div>
+                      <div className="flex items-center gap-2 text-gray-600 text-sm"><span className="text-xl">🖼️</span><span>Select Images (multiple allowed)</span></div>
                     </label>
                     <label className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:bg-gray-100 transition">
                       <input type="file" accept="video/*" onChange={(e) => e.target.files[0] && addFiles([e.target.files[0]], 'video')} className="hidden" />
-                      <div className="flex items-center gap-2 text-gray-600 text-sm">
-                        <span className="text-xl">🎥</span>
-                        <span>Select Video (1 allowed)</span>
-                      </div>
+                      <div className="flex items-center gap-2 text-gray-600 text-sm"><span className="text-xl">🎥</span><span>Select Video (1 allowed)</span></div>
                     </label>
                     <label className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:bg-gray-100 transition">
                       <input type="file" accept="audio/*" onChange={(e) => e.target.files[0] && addFiles([e.target.files[0]], 'audio')} className="hidden" />
-                      <div className="flex items-center gap-2 text-gray-600 text-sm">
-                        <span className="text-xl">🎵</span>
-                        <span>Select Audio (1 allowed)</span>
-                      </div>
+                      <div className="flex items-center gap-2 text-gray-600 text-sm"><span className="text-xl">🎵</span><span>Select Audio (1 allowed)</span></div>
                     </label>
                   </div>
-
                   {mediaPreviews.length > 0 && (
                     <div className="mt-3">
                       <p className="text-xs text-gray-500 mb-2">Selected files ({mediaPreviews.length}):</p>
                       <div className="flex flex-wrap gap-2">
                         {mediaPreviews.map((preview, index) => (
                           <div key={index} className="relative">
-                            {preview.type.startsWith('image') && (
-                              <img src={preview.url} alt="preview" className="w-16 h-16 object-cover rounded border border-gray-200" />
-                            )}
-                            {preview.type.startsWith('video') && (
-                              <div className="w-16 h-16 bg-purple-100 rounded border border-purple-200 flex items-center justify-center text-2xl">🎥</div>
-                            )}
-                            {preview.type.startsWith('audio') && (
-                              <div className="w-16 h-16 bg-blue-100 rounded border border-blue-200 flex items-center justify-center text-2xl">🎵</div>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => removeFile(index)}
-                              className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-red-600"
-                            >×</button>
+                            {preview.type.startsWith('image') && <img src={preview.url} alt="preview" className="w-16 h-16 object-cover rounded border border-gray-200" />}
+                            {preview.type.startsWith('video') && <div className="w-16 h-16 bg-purple-100 rounded border border-purple-200 flex items-center justify-center text-2xl">🎥</div>}
+                            {preview.type.startsWith('audio') && <div className="w-16 h-16 bg-blue-100 rounded border border-blue-200 flex items-center justify-center text-2xl">🎵</div>}
+                            <button type="button" onClick={() => removeFile(index)}
+                              className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-red-600">×</button>
                           </div>
                         ))}
                       </div>
@@ -335,12 +356,8 @@ function ProductDetail() {
                     {reviewMessage}
                   </div>
                 )}
-
-                <button
-                  type="submit"
-                  disabled={reviewLoading}
-                  className="bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 font-medium"
-                >
+                <button type="submit" disabled={reviewLoading}
+                  className="bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 font-medium">
                   {reviewLoading ? '⏳ Uploading & Submitting...' : '⭐ Submit Review'}
                 </button>
               </form>
@@ -349,10 +366,7 @@ function ProductDetail() {
 
           {/* All Reviews */}
           <div className="bg-white rounded-xl shadow p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">
-              Customer Reviews ({product.numReviews})
-            </h3>
-
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Customer Reviews ({product.numReviews})</h3>
             {product.reviews.length === 0 ? (
               <p className="text-gray-500">No reviews yet. Be the first to review!</p>
             ) : (
@@ -361,9 +375,7 @@ function ProductDetail() {
                   <div key={review._id} className="border-b pb-4 last:border-0">
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-semibold text-gray-800">{review.name}</span>
-                      <span className="text-xs text-gray-400">
-                        {new Date(review.createdAt).toLocaleDateString()}
-                      </span>
+                      <span className="text-xs text-gray-400">{new Date(review.createdAt).toLocaleDateString()}</span>
                     </div>
                     <div className="text-yellow-400 text-sm mb-2">
                       {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
@@ -384,9 +396,7 @@ function ProductDetail() {
                     {review.audio && (
                       <div className="bg-gray-50 rounded-lg p-2 mb-2">
                         <p className="text-xs text-gray-500 mb-1">🎵 Audio Review</p>
-                        <audio controls className="w-full">
-                          <source src={review.audio} />
-                        </audio>
+                        <audio controls className="w-full"><source src={review.audio} /></audio>
                       </div>
                     )}
                   </div>

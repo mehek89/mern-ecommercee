@@ -10,6 +10,13 @@ const reviewSchema = new mongoose.Schema({
   audio: { type: String, default: '' }
 }, { timestamps: true })
 
+const variantSchema = new mongoose.Schema({
+  size: { type: String, default: '' },
+  color: { type: String, default: '' },
+  stock: { type: Number, default: 0 },
+  price: { type: Number, default: 0 }
+})
+
 const productSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   description: { type: String, required: true },
@@ -20,7 +27,10 @@ const productSchema = new mongoose.Schema({
   stock: { type: Number, required: true, default: 0 },
   ratings: { type: Number, default: 0 },
   numReviews: { type: Number, default: 0 },
-  reviews: [reviewSchema]
+  reviews: [reviewSchema],
+  variants: [variantSchema],
+  sizes: [{ type: String }],
+  colors: [{ type: String }]
 }, { timestamps: true })
 
 const Product = mongoose.model('Product', productSchema)
