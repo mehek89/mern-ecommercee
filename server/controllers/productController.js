@@ -100,15 +100,15 @@ export const updateProduct = async (req, res) => {
 
     const { name, description, price, category, brand, stock, images, sizes, colors } = req.body
 
-    product.name = name || product.name
-    product.description = description || product.description
-    product.price = price || product.price
-    product.category = category || product.category
-    product.brand = brand || product.brand
-    product.stock = stock || product.stock
-    product.images = images || product.images
-    if (sizes) product.sizes = sizes
-    if (colors) product.colors = colors
+    if (name !== undefined) product.name = name
+    if (description !== undefined) product.description = description
+    if (price !== undefined) product.price = price
+    if (category !== undefined) product.category = category
+    if (brand !== undefined) product.brand = brand
+    if (stock !== undefined) product.stock = stock
+    if (images !== undefined) product.images = images
+    if (sizes !== undefined) product.sizes = sizes
+    if (colors !== undefined) product.colors = colors
 
     const updatedProduct = await product.save()
     res.json(updatedProduct)
