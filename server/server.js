@@ -11,6 +11,7 @@ import productRoutes from './routes/productRoutes.js'
 import cartRoutes from './routes/cartRoutes.js'
 import orderRoutes from './routes/orderRoutes.js'
 import wishlistRoutes from './routes/wishlistRoutes.js'
+import couponRoutes from './routes/couponRoutes.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -28,6 +29,7 @@ app.use('/api/products', productRoutes)
 app.use('/api/cart', cartRoutes)
 app.use('/api/orders', orderRoutes)
 app.use('/api/wishlist', wishlistRoutes)
+app.use('/api/coupons', couponRoutes)
 
 // Serve React frontend — must be LAST
 app.use(express.static(path.join(__dirname, '../client/dist')))
