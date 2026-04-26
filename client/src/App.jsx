@@ -14,6 +14,12 @@ import Orders from './pages/Orders'
 import Wishlist from './pages/Wishlist'
 import MyAlerts from './pages/MyAlerts'
 
+// Admin Pages
+import Dashboard from './pages/admin/Dashboard'
+import ManageProducts from './pages/admin/ManageProducts'
+import ManageOrders from './pages/admin/ManageOrders'
+import ManageUsers from './pages/admin/ManageUsers'
+
 function App() {
   return (
     <Provider store={store}>
@@ -29,6 +35,12 @@ function App() {
           <Route path="/orders" element={<Orders />} />
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/alerts" element={<MyAlerts />} />
+
+          {/* Admin Routes */}
+          <Route path="/admin" element={<Dashboard />} />
+          <Route path="/admin/products" element={<ManageProducts />} />
+          <Route path="/admin/orders" element={<ManageOrders />} />
+          <Route path="/admin/users" element={<ManageUsers />} />
         </Routes>
       </Router>
     </Provider>

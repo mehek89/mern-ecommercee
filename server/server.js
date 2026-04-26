@@ -14,6 +14,7 @@ import wishlistRoutes from './routes/wishlistRoutes.js'
 import couponRoutes from './routes/couponRoutes.js'
 import stockAlertRoutes from './routes/stockAlertRoutes.js'
 import paymentRoutes from './routes/paymentRoutes.js'
+import adminRoutes from './routes/adminRoutes.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -34,6 +35,7 @@ app.use('/api/wishlist', wishlistRoutes)
 app.use('/api/coupons', couponRoutes)
 app.use('/api/stockalerts', stockAlertRoutes)
 app.use('/api/payment', paymentRoutes)
+app.use('/api/admin', adminRoutes)
 
 // Serve React frontend — must be LAST
 app.use(express.static(path.join(__dirname, '../client/dist')))
