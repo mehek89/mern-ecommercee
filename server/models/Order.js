@@ -17,7 +17,14 @@ const orderSchema = new mongoose.Schema({
     postalCode: String,
     country: String
   },
-  paymentMethod: { type: String, default: 'Card' },
+  paymentMethod: { type: String, default: 'Razorpay' },
+  paymentResult: {
+    id: String,
+    status: String,
+    razorpay_order_id: String,
+    razorpay_signature: String
+  },
+  couponCode: { type: String, default: '' },
   totalPrice: { type: Number, required: true, default: 0 },
   isPaid: { type: Boolean, default: false },
   paidAt: { type: Date },
