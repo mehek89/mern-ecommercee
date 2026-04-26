@@ -25,6 +25,8 @@ function ProductDetail() {
   const [selectedSize, setSelectedSize] = useState('')
   const [selectedColor, setSelectedColor] = useState('')
   const [relatedProducts, setRelatedProducts] = useState([])
+  const [alertLoading, setAlertLoading] = useState(false)
+  const [alertMessage, setAlertMessage] = useState('')
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { user } = useSelector((state) => state.auth)
@@ -118,6 +120,23 @@ function ProductDetail() {
     }
   }
 
+  const handleStockAlert = async () => {
+    if (!user) { navigate('/login'); return }
+    setAlertLoading(true)
+    try {
+      const { data } = await axiosInstance.post('/stockalerts', {
+        productId: product._id
+      })
+      setAlertMessage(data.message)
+      setTimeout(() => setAlertMessage(''), 4000)
+    } catch (error) {
+      setAlertMessage('❌ ' + (error.response?.data?.message || 'Failed to subscribe'))
+      setTimeout(() => setAlertMessage(''), 3000)
+    } finally {
+      setAlertLoading(false)
+    }
+  }
+
   const addFiles = (files, type) => {
     setMediaFiles(prev => [...prev.filter(f => !f.type.startsWith(type)), ...files])
     setMediaPreviews(prev => [
@@ -178,6 +197,7 @@ function ProductDetail() {
           <div className="ml-auto flex gap-4">
             <Link to="/products" className="text-sm hover:text-yellow-300">Products</Link>
             <Link to="/wishlist" className="text-sm hover:text-yellow-300">🤍 Wishlist</Link>
+            <Link to="/alerts" className="text-sm hover:text-yellow-300">🔔 Alerts</Link>
             <Link to="/cart" className="text-sm hover:text-yellow-300">🛒 Cart</Link>
           </div>
         </div>
@@ -250,6 +270,27 @@ function ProductDetail() {
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Stock Alert — only show when out of stock */}
+            {product.stock === 0 && (
+              <div className="mb-4 bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <p className="text-orange-700 font-medium mb-2">
+                  😔 This product is currently out of stock
+                </p>
+                <button
+                  onClick={handleStockAlert}
+                  disabled={alertLoading}
+                  className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition disabled:opacity-50 text-sm font-medium"
+                >
+                  {alertLoading ? '...' : '🔔 Notify me when back in stock'}
+                </button>
+                {alertMessage && (
+                  <p className={`text-sm mt-2 ${alertMessage.includes('✅') ? 'text-green-600' : 'text-red-500'}`}>
+                    {alertMessage}
+                  </p>
+                )}
               </div>
             )}
 
