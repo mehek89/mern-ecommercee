@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import User from '../models/User.js'
 import generateToken from '../utils/generateToken.js'
+import { sendWelcomeEmail } from '../utils/sendEmail.js'
 
 // Register
 export const registerUser = async (req, res) => {
@@ -23,6 +24,9 @@ export const registerUser = async (req, res) => {
       email,
       password: hashedPassword
     })
+
+    // ✅ Send welcome email AFTER user is created
+    sendWelcomeEmail(user.name, user.email)
 
     res.status(201).json({
       _id: user._id,

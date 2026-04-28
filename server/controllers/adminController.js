@@ -1,6 +1,7 @@
 import User from '../models/User.js'
 import Product from '../models/Product.js'
 import Order from '../models/Order.js'
+import { sendOrderStatusEmail } from '../utils/sendEmail.js'
 
 // Get stats
 export const getAdminStats = async (req, res) => {
@@ -9,9 +10,11 @@ export const getAdminStats = async (req, res) => {
     const totalProducts = await Product.countDocuments()
     const totalOrders = await Order.countDocuments()
     const orders = await Order.find({})
+
     const totalRevenue = orders.reduce((acc, order) => acc + order.totalPrice, 0)
     const paidOrders = orders.filter(o => o.isPaid).length
     const pendingOrders = orders.filter(o => o.status === 'pending').length
+
     const recentOrders = await Order.find({})
       .populate('user', 'name email')
       .sort({ createdAt: -1 })
@@ -37,6 +40,7 @@ export const getAllOrders = async (req, res) => {
     const orders = await Order.find({})
       .populate('user', 'name email')
       .sort({ createdAt: -1 })
+
     res.json(orders)
   } catch (error) {
     res.status(500).json({ message: error.message })
@@ -48,14 +52,34 @@ export const updateOrderStatus = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
     if (!order) return res.status(404).json({ message: 'Order not found' })
+
     order.status = req.body.status
+
     if (req.body.status === 'delivered') {
       order.isDelivered = true
       order.deliveredAt = Date.now()
     }
+
     const updated = await order.save()
+
+    // ✅ Send status update email
+    const userDoc = await User.findById(order.user)
+    if (userDoc) {
+      try {
+        await sendOrderStatusEmail(
+          userDoc.name,
+          userDoc.email,
+          order._id,
+          req.body.status
+        )
+      } catch (err) {
+        console.log("Email failed:", err.message)
+      }
+    }
+
     res.json(updated)
   } catch (error) {
+    console.log('Update order status error:', error)
     res.status(500).json({ message: error.message })
   }
 }
@@ -63,7 +87,10 @@ export const updateOrderStatus = async (req, res) => {
 // Get all users
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}).select('-password').sort({ createdAt: -1 })
+    const users = await User.find({})
+      .select('-password')
+      .sort({ createdAt: -1 })
+
     res.json(users)
   } catch (error) {
     res.status(500).json({ message: error.message })

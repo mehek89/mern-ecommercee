@@ -1,5 +1,7 @@
 import Order from '../models/Order.js'
 import Cart from '../models/Cart.js'
+import User from '../models/User.js' // ✅ IMPORTANT (added)
+import { sendOrderConfirmationEmail } from '../utils/sendEmail.js'
 
 // Place order
 export const placeOrder = async (req, res) => {
@@ -21,8 +23,15 @@ export const placeOrder = async (req, res) => {
 
     await Cart.findOneAndDelete({ user: req.user._id })
 
+    // ✅ Send order confirmation email
+    const userDoc = await User.findById(req.user._id)
+    if (userDoc) {
+      await sendOrderConfirmationEmail(userDoc.name, userDoc.email, order)
+    }
+
     res.status(201).json(order)
   } catch (error) {
+    console.log('Place order error:', error)
     res.status(500).json({ message: error.message })
   }
 }
